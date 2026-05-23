@@ -4,7 +4,6 @@ An AI-driven autocorrect tool that detects and fixes spelling, grammar, and cont
 
 ![Dark glassmorphism UI with error highlighting](./docs/screenshot.png)
 
----
 
 ## ✨ Features
 
@@ -21,7 +20,6 @@ An AI-driven autocorrect tool that detects and fixes spelling, grammar, and cont
 | **Correction History** | Session history of accepted corrections |
 | **Supabase** | Optional cloud persistence for history and dictionary |
 
----
 
 ## 🏗️ Architecture
 
@@ -39,19 +37,14 @@ Backend (FastAPI)
   Supabase (optional)
 ```
 
----
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- **Node.js** 18+
-- **Python** 3.11+
-- **Java** 17+ *(required by LanguageTool for grammar checking)*
 
 > To install Java on Windows: download from [adoptium.net](https://adoptium.net)
 
----
 
 ### Backend Setup
 
@@ -81,7 +74,6 @@ The backend will:
 
 > **Tip**: Set `ENABLE_CONTEXT_MODEL=false` and/or `ENABLE_GRAMMAR_CHECK=false` in `.env` for faster startup during development.
 
----
 
 ### Frontend Setup
 
@@ -100,7 +92,6 @@ npm run dev
 
 Visit **http://localhost:5173**
 
----
 
 ## 📡 API Reference
 
@@ -142,7 +133,6 @@ Add words to custom dictionary: `{ "words": ["supabase", "fastapi"] }`
 ### `GET /api/health`
 Check service status and which NLP modules are active.
 
----
 
 ## ⚙️ Configuration
 
@@ -166,7 +156,6 @@ Check service status and which NLP modules are active.
 | `grammarly/coedit-large` *(default)* | 1.5GB | 6GB | Medium | ⭐⭐⭐⭐ |
 | `grammarly/coedit-xl` | 6GB | 16GB | Slow | ⭐⭐⭐⭐⭐ |
 
----
 
 ## 🧪 Testing
 
@@ -186,7 +175,6 @@ python -m pytest tests/test_spell_checker.py -v
 python -m pytest tests/test_api.py -v
 ```
 
----
 
 ## 🐳 Docker (Backend)
 
@@ -196,7 +184,6 @@ docker build -t autocorrect-backend .
 docker run -p 8000:8000 --env-file .env autocorrect-backend
 ```
 
----
 
 ## 🚢 Deployment
 
@@ -216,12 +203,10 @@ Set `VITE_API_URL=https://your-backend.render.com` in Vercel environment variabl
 4. Add environment variables from `.env.example`
 5. Ensure **Java 17** is available (use Docker deployment on Render for this)
 
----
 
 ## 🗄️ Supabase Schema
 
 ```sql
--- Run in Supabase SQL Editor
 CREATE TABLE correction_history (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   original_text TEXT NOT NULL,
@@ -241,7 +226,6 @@ CREATE INDEX idx_correction_history_created_at
   ON correction_history(created_at DESC);
 ```
 
----
 
 ## 📁 Project Structure
 
@@ -281,7 +265,6 @@ autocorrect-tool/
     └── vite.config.js
 ```
 
----
 
 ## 🔬 Algorithms
 
@@ -292,7 +275,6 @@ autocorrect-tool/
 | Encoder-decoder T5 | CoEdIT model | Deep contextual correction |
 | SequenceMatcher diff | difflib | Map AI corrections to character offsets |
 
----
 
 ## 📄 License
 
