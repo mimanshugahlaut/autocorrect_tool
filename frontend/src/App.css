@@ -1,0 +1,78 @@
+/* ── App Layout ──────────────────────────────────────────────────────────── */
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Editor Container ─────────────────────────────────────────────────────── */
+.editor-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-right: 1px solid var(--glass-border);
+  background: linear-gradient(
+    160deg,
+    var(--bg-elevated) 0%,
+    var(--bg-base) 100%
+  );
+  position: relative;
+}
+
+/* Editor panel top-right word count */
+.editor-meta {
+  padding: var(--sp-2) var(--sp-6);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* ── API Error Banner ─────────────────────────────────────────────────────── */
+.api-error-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--sp-3) var(--sp-6);
+  background: hsl(0, 60%, 15%);
+  border-bottom: 1px solid hsl(0, 60%, 30%);
+  font-size: 0.8125rem;
+  color: var(--spell-color);
+  flex-shrink: 0;
+  animation: fadeIn 0.2s ease;
+}
+
+.api-error-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .app-main {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100% !important;
+    min-width: unset !important;
+    max-height: 40vh;
+    border-left: none !important;
+    border-top: 1px solid var(--glass-border);
+  }
+
+  .editor-container {
+    flex: 1;
+    min-height: 0;
+  }
+}
