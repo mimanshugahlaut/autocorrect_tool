@@ -1,8 +1,14 @@
 # 🤖 Autocorrect Tool — AI Writing Assistant
 
+[![CI](https://github.com/mimanshugahlaut/autocorrect_tool/actions/workflows/ci.yml/badge.svg)](https://github.com/mimanshugahlaut/autocorrect_tool/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev)
+
 An AI-driven autocorrect tool that detects and fixes spelling, grammar, and contextual errors in real time using a three-tier NLP pipeline.
 
-![Dark glassmorphism UI with error highlighting](./docs/screenshot.png)
+> **Live demo:** _deploy the backend to Render and the frontend to Vercel — see the [Deployment](#-deployment-100-free-hosting) section below._
 
 
 ## ✨ Features
@@ -40,10 +46,43 @@ Backend (FastAPI)
 
 ## 🚀 Quick Start
 
+### Launch as a Browser Extension
+
+#### Option A: Quick Install (Pre-packaged ZIP)
+1. Download the pre-built extension package **[dist.zip](extension/dist.zip)** (or get it from the GitHub Releases page).
+2. Extract the `dist.zip` file to a folder on your computer.
+3. Open Chrome or Edge and go to `chrome://extensions` (or `edge://extensions`).
+4. Enable **Developer mode** (top-right toggle).
+5. Click **Load unpacked** (top-left button).
+6. Select the extracted folder containing the extension files.
+
+#### Option B: Build from Source
+```bash
+cd extension
+npm install
+npm run build
+```
+Then open Chrome or Edge, go to `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and select `extension/dist`.
+
+The extension works in two modes:
+
+- Backend-enhanced mode: if the FastAPI backend is running on `http://127.0.0.1:8000`, the extension uses spelling, lightweight grammar, common typo, and optional AI/context checks.
+- Offline fallback mode: if the backend is unavailable, the extension uses its bundled dictionary for local spelling checks.
+
+For best correction quality while testing the extension, start the backend first.
+
 ### Prerequisites
 
+| Dependency | Minimum Version | Notes |
+|------------|----------------|-------|
+| **Python** | 3.12 | Backend runtime |
+| **Java** | 17+ | Required by LanguageTool (grammar checker) |
+| **Node.js** | 20+ | Frontend and extension builds |
+| **npm** | 9+ | Package manager |
 
 > To install Java on Windows: download from [adoptium.net](https://adoptium.net)
+>
+> **Tip:** Set `ENABLE_GRAMMAR_CHECK=false` and `ENABLE_CONTEXT_MODEL=false` in `.env` to skip Java and the 1.5GB AI model during development.
 
 
 ### Backend Setup
@@ -73,6 +112,13 @@ The backend will:
 3. Download and load `grammarly/coedit-large` (~1.5GB, first run only)
 
 > **Tip**: Set `ENABLE_CONTEXT_MODEL=false` and/or `ENABLE_GRAMMAR_CHECK=false` in `.env` for faster startup during development.
+
+The app also includes lightweight built-in rules that work even when the heavy grammar/context systems are disabled:
+
+- Capitalizes standalone `i` to `I`
+- Fixes repeated words such as `a a`
+- Fixes simple article agreement such as `a apple` to `an apple`
+- Corrects common typing mistakes such as `th` to `the` and `perosm` to `person`
 
 
 ### Frontend Setup
@@ -127,11 +173,24 @@ Return only the corrected text.
 ### `GET /api/history?limit=50&offset=0`
 Get paginated correction history (requires Supabase).
 
+### `DELETE /api/history`
+Clear all correction history.
+
 ### `POST /api/dictionary`
 Add words to custom dictionary: `{ "words": ["supabase", "fastapi"] }`
 
+### `GET /api/dictionary`
+Return all custom dictionary words.
+
+### `DELETE /api/dictionary/{word}`
+Remove a word from the custom dictionary.
+
 ### `GET /api/health`
 Check service status and which NLP modules are active.
+
+### `GET /api/stats`
+Return backend capability flags (useful for the frontend status display).
+
 
 
 ## ⚙️ Configuration
@@ -185,23 +244,46 @@ docker run -p 8000:8000 --env-file .env autocorrect-backend
 ```
 
 
-## 🚢 Deployment
+## 🚢 Deployment (100% Free Hosting)
 
-### Frontend → Vercel
-```bash
-cd frontend && npm run build
-# Deploy `dist/` folder to Vercel, or use Vercel CLI:
-npx vercel --prod
-```
+### 1. Database → Supabase (Free Tier)
+1. Sign up on [supabase.com](https://supabase.com) and create a free project.
+2. Open the **SQL Editor** in the Supabase Dashboard and run the query in the [Supabase Schema](#️-supabase-schema) section below to set up tables.
+3. Obtain your `SUPABASE_URL` and `SUPABASE_KEY` (Anon Key) from Project Settings -> API.
 
-Set `VITE_API_URL=https://your-backend.render.com` in Vercel environment variables.
+### 2. Backend → Hugging Face Spaces (Free 16GB RAM, Full AI Enabled)
+This is the **highly recommended** method to run the backend for free, as Hugging Face provides **16GB of RAM** which can comfortably run our 1.5GB `grammarly/coedit-large` deep grammar AI model.
 
-### Backend → Render
-1. Connect GitHub repo to Render
-2. Set Build Command: `pip install -r requirements.txt`
-3. Set Start Command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-4. Add environment variables from `.env.example`
-5. Ensure **Java 17** is available (use Docker deployment on Render for this)
+1. Sign up/log in on [huggingface.co](https://huggingface.co).
+2. Go to **Spaces** -> **New Space**.
+3. Set Space Name (e.g. `autocorrect-backend`), and select **Docker** as the SDK.
+4. Select **Blank** template (or choose Docker).
+5. Set Space visibility to **Public** (required for API access).
+6. Clone the Space repository, copy the backend directory contents along with `Dockerfile.hf` (rename it to `Dockerfile`), and push to Hugging Face!
+7. Or, connect it to your GitHub repository and build using the provided `Dockerfile.hf`.
+8. Set Space variables (Settings -> Variables and Secrets):
+   - `ENABLE_CONTEXT_MODEL` = `true`
+   - `ENABLE_GRAMMAR_CHECK` = `true`
+   - `SUPABASE_URL` = *(your Supabase URL)*
+   - `SUPABASE_KEY` = *(your Supabase Key)*
+
+### 3. Backend → Render (Free 512MB RAM, Lightweight Mode)
+Render provides free web service hosting, but has a 512MB RAM limit. To prevent Out-Of-Memory crashes, we must disable the deep AI model (`ENABLE_CONTEXT_MODEL=false`).
+
+1. Connect your GitHub repository to [Render.com](https://render.com).
+2. Create a new **Web Service** and choose **Docker** as the runtime.
+3. Specify `backend/Dockerfile` as the Dockerfile path.
+4. Render will automatically read the `render.yaml` blueprint to set:
+   - `ENABLE_CONTEXT_MODEL` = `false`
+   - `ENABLE_GRAMMAR_CHECK` = `true`
+   - `SUPABASE_URL` & `SUPABASE_KEY` (add these in Render environment variables)
+
+### 4. Frontend → Vercel or Netlify (Free Tier)
+1. Sign up on [Vercel](https://vercel.com) or [Netlify](https://netlify.com) and connect your GitHub repository.
+2. Set the build directory/root directory to `frontend`.
+3. Add the following **Environment Variable** in the Vercel/Netlify dashboard:
+   - `VITE_API_URL` = `https://your-backend-url.hf.space` (or your Render URL)
+4. Deploy the project!
 
 
 ## 🗄️ Supabase Schema
@@ -276,6 +358,21 @@ autocorrect-tool/
 | SequenceMatcher diff | difflib | Map AI corrections to character offsets |
 
 
+## 🤝 Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/my-feature`
+3. Make your changes with tests
+4. Open a pull request against `main`
+
+Please run the test suite before submitting:
+```bash
+cd backend && python -m pytest tests/ -v
+```
+
+
 ## 📄 License
 
-MIT
+MIT — see [LICENSE](LICENSE)

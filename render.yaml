@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: autocorrect-backend
+    env: docker
+    dockerfilePath: backend/Dockerfile
+    plan: free
+    envVars:
+      - key: ENABLE_CONTEXT_MODEL
+        value: "false"
+      - key: ENABLE_GRAMMAR_CHECK
+        value: "true"
+      - key: APP_DEBUG
+        value: "false"
+      - key: CORS_ORIGINS
+        value: "*" # Change this to your Vercel/Netlify URL in production for security
+      - key: SUPABASE_URL
+        value: "" # Fill this in with your Supabase URL for persistent history
+      - key: SUPABASE_KEY
+        value: "" # Fill this in with your Supabase Anon Key

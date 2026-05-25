@@ -12,15 +12,40 @@ export default function Sidebar({
   onAccept,
   onDismiss,
   onApplyAll,
+  onAddToDictionary,
 }) {
-  const { sidebarTab, setSidebarTab, sessionHistory, customWords, addCustomWord } =
-    useCorrectionContext();
-  const [newWord, setNewWord] = useState('');
+  const {
+    sidebarTab,
+    setSidebarTab,
+    sessionHistory,
+    clearHistory,
+    customWords,
+    addCustomWord,
+  } = useCorrectionContext();
+
+  const [newWord, setNewWord]           = useState('');
+  const [dictionaryError, setDictionaryError] = useState('');
+  const [isSavingWord, setIsSavingWord] = useState(false);
 
   const grouped = {
     spelling: errors.filter((e) => e.error_type === 'spelling'),
     grammar:  errors.filter((e) => e.error_type === 'grammar'),
     context:  errors.filter((e) => e.error_type === 'context'),
+  };
+
+  const handleAddWord = async (word) => {
+    const clean = word.trim().toLowerCase();
+    if (!clean) return;
+    setIsSavingWord(true);
+    setDictionaryError('');
+    try {
+      await addCustomWord(clean);
+      setNewWord('');
+    } catch (err) {
+      setDictionaryError(err.message || 'Could not add word.');
+    } finally {
+      setIsSavingWord(false);
+    }
   };
 
   return (
@@ -36,8 +61,8 @@ export default function Sidebar({
             className={`sidebar-tab ${sidebarTab === tab ? 'sidebar-tab--active' : ''}`}
             onClick={() => setSidebarTab(tab)}
           >
-            {tab === 'errors'    && `Errors ${errors.length > 0 ? `(${errors.length})` : ''}`}
-            {tab === 'history'  && 'History'}
+            {tab === 'errors'   && `Errors${errors.length > 0 ? ` (${errors.length})` : ''}`}
+            {tab === 'history'  && `History${sessionHistory.length > 0 ? ` (${sessionHistory.length})` : ''}`}
             {tab === 'settings' && 'Settings'}
           </button>
         ))}
@@ -60,7 +85,7 @@ export default function Sidebar({
                   className="btn btn-primary apply-all-btn"
                   onClick={onApplyAll}
                 >
-                  Apply All Corrections ({errors.length})
+                  ✦ Apply All Corrections ({errors.length})
                 </button>
               )}
               {Object.entries(grouped).map(([type, errs]) =>
@@ -78,6 +103,7 @@ export default function Sidebar({
                         error={error}
                         onAccept={onAccept}
                         onDismiss={onDismiss}
+                        onAddToDictionary={onAddToDictionary}
                       />
                     ))}
                   </div>
@@ -98,17 +124,26 @@ export default function Sidebar({
               <span>Accepted corrections will appear here.</span>
             </div>
           ) : (
-            sessionHistory.map((record, i) => (
-              <div key={i} className="history-card">
-                <div className="history-meta">
-                  <span className="history-time">{record.time}</span>
-                  <span className="history-badge">{record.type}</span>
+            <>
+              <button
+                className="btn btn-ghost btn-sm clear-history-btn"
+                onClick={clearHistory}
+                id="clear-history-btn"
+              >
+                Clear History
+              </button>
+              {sessionHistory.map((record, i) => (
+                <div key={i} className="history-card">
+                  <div className="history-meta">
+                    <span className="history-time">{record.time}</span>
+                    <span className="history-badge">{record.type}</span>
+                  </div>
+                  <div className="history-original">"{record.original}"</div>
+                  <div className="history-arrow">→</div>
+                  <div className="history-corrected">"{record.corrected}"</div>
                 </div>
-                <div className="history-original">"{record.original}"</div>
-                <div className="history-arrow">→</div>
-                <div className="history-corrected">"{record.corrected}"</div>
-              </div>
-            ))
+              ))}
+            </>
           )}
         </div>
       )}
@@ -123,12 +158,9 @@ export default function Sidebar({
             </p>
             <form
               className="dictionary-form"
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
-                if (newWord.trim()) {
-                  addCustomWord(newWord.trim());
-                  setNewWord('');
-                }
+                await handleAddWord(newWord);
               }}
             >
               <input
@@ -144,11 +176,15 @@ export default function Sidebar({
                 id="add-word-btn"
                 type="submit"
                 className="btn btn-primary btn-sm"
-                disabled={!newWord.trim()}
+                disabled={!newWord.trim() || isSavingWord}
               >
-                Add
+                {isSavingWord ? '…' : 'Add'}
               </button>
             </form>
+
+            {dictionaryError && (
+              <p className="settings-error" role="alert">{dictionaryError}</p>
+            )}
 
             {customWords.length > 0 && (
               <div className="dictionary-list" aria-label="Custom dictionary words">
@@ -184,7 +220,7 @@ export default function Sidebar({
   );
 }
 
-function ErrorCard({ error, onAccept, onDismiss }) {
+function ErrorCard({ error, onAccept, onDismiss, onAddToDictionary }) {
   const cfg = ERROR_CONFIG[error.error_type] || ERROR_CONFIG.spelling;
   const topSuggestion = error.suggestions?.[0];
 
@@ -219,6 +255,16 @@ function ErrorCard({ error, onAccept, onDismiss }) {
         >
           Ignore
         </button>
+        {error.error_type === 'spelling' && onAddToDictionary && (
+          <button
+            id={`add-dict-${error.offset}`}
+            className="btn btn-ghost btn-sm btn-add-dict"
+            onClick={() => onAddToDictionary(error.original)}
+            title="Add to custom dictionary — won't be flagged again"
+          >
+            + Dict
+          </button>
+        )}
       </div>
     </div>
   );

@@ -104,3 +104,16 @@ def test_dictionary_get(client):
 def test_dictionary_post(client):
     response = client.post("/api/dictionary", json={"words": ["supabase", "fastapi"]})
     assert response.status_code == 200
+
+
+def test_dictionary_post_normalizes_words(client):
+    response = client.post("/api/dictionary", json={"words": ["  Supabase  ", "supabase"]})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["words"] == ["supabase"]
+    assert data["total"] == 1
+
+
+def test_dictionary_post_rejects_invalid_words(client):
+    response = client.post("/api/dictionary", json={"words": ["valid", "bad123"]})
+    assert response.status_code == 422

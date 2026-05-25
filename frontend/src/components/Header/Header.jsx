@@ -1,9 +1,11 @@
+import { useCorrectionContext } from '../../context/CorrectionContext';
 import './Header.css';
 
 /**
  * Top navigation bar.
  */
-export default function Header({ isLoading, errorCounts, correctionsMade }) {
+export default function Header({ isLoading, errorCounts, correctionsMade, wordCount, charCount }) {
+  const { backendStatus } = useCorrectionContext();
   const total = Object.values(errorCounts || {}).reduce((a, b) => a + b, 0);
 
   return (
@@ -57,16 +59,42 @@ export default function Header({ isLoading, errorCounts, correctionsMade }) {
             )}
           </>
         )}
-        {!isLoading && total === 0 && correctionsMade === 0 && (
+        {!isLoading && total === 0 && correctionsMade === 0 && wordCount === 0 && (
+          <div className="stat-pill stat-clean" title="Start typing to check your text">
+            <span>✦ Ready</span>
+          </div>
+        )}
+        {!isLoading && total === 0 && (correctionsMade > 0 || wordCount > 0) && (
           <div className="stat-pill stat-clean" title="No errors found">
             <span>✓ Looking good</span>
+          </div>
+        )}
+        {wordCount > 0 && (
+          <div className="stat-pill stat-count" title="Word and character count">
+            <span>{wordCount} words · {charCount} chars</span>
           </div>
         )}
       </div>
 
       <div className="header-actions">
+        {/* Backend connection status */}
+        <div
+          className={`backend-status backend-status--${backendStatus}`}
+          title={
+            backendStatus === 'online'  ? 'Backend connected (full NLP pipeline active)' :
+            backendStatus === 'offline' ? 'Backend offline — check if the FastAPI server is running' :
+                                          'Checking backend…'
+          }
+          aria-label={`Backend ${backendStatus}`}
+        >
+          <span className="backend-status-dot" aria-hidden="true" />
+          <span className="backend-status-label">
+            {backendStatus === 'online' ? 'Online' : backendStatus === 'offline' ? 'Offline' : '…'}
+          </span>
+        </div>
+
         <a
-          href="https://github.com"
+          href="https://github.com/mimanshugahlaut/autocorrect_tool"
           target="_blank"
           rel="noopener noreferrer"
           className="btn btn-ghost btn-sm"

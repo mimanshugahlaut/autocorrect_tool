@@ -229,6 +229,12 @@
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
+.settings-error {
+  color: var(--spell-color);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
 .dictionary-list {
   display: flex;
   flex-wrap: wrap;
@@ -263,3 +269,29 @@
   font-size: 0.8125rem;
   color: var(--text-secondary);
 }
+
+/* ── Add to Dictionary button (small, context-colored) ─────────────────── */
+.btn-add-dict {
+  color: var(--context-color) !important;
+  border-color: hsl(42, 70%, 45%, 0.35) !important;
+  font-size: 0.7rem !important;
+  padding: 2px 8px !important;
+}
+
+.btn-add-dict:hover {
+  background: var(--context-bg) !important;
+}
+
+/* ── Clear History button ────────────────────────────────────────────────── */
+.clear-history-btn {
+  align-self: flex-end;
+  font-size: 0.7rem !important;
+  color: var(--text-muted) !important;
+  margin-bottom: calc(-1 * var(--sp-1));
+}
+
+.clear-history-btn:hover {
+  color: var(--spell-color) !important;
+  border-color: hsl(0, 70%, 40%, 0.4) !important;
+}
+

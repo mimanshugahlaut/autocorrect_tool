@@ -16,6 +16,7 @@ from app.models import CheckResponse, CorrectResponse, ErrorSuggestion
 from app.nlp.spell_checker import SpellCheckerModule
 from app.nlp.grammar_checker import GrammarCheckerModule
 from app.nlp.context_model import ContextModelModule
+from app.nlp.lightweight_rules import LightweightRuleChecker
 
 logger = logging.getLogger(__name__)
 
@@ -63,12 +64,14 @@ class NLPPipeline:
         spell_checker: SpellCheckerModule,
         grammar_checker: GrammarCheckerModule,
         context_model: ContextModelModule,
+        rule_checker: LightweightRuleChecker | None = None,
         enable_grammar: bool = True,
         enable_context: bool = True,
     ) -> None:
         self.spell_checker = spell_checker
         self.grammar_checker = grammar_checker
         self.context_model = context_model
+        self.rule_checker = rule_checker or LightweightRuleChecker()
         self.enable_grammar = enable_grammar
         self.enable_context = enable_context
 
@@ -80,7 +83,10 @@ class NLPPipeline:
         all_errors: list[ErrorSuggestion] = []
 
         # ── Tier 1 & 2: Run concurrently ─────────────────────────────────
-        tasks: dict[str, callable] = {"spelling": lambda: self.spell_checker.check(text)}
+        tasks: dict[str, callable] = {
+            "spelling": lambda: self.spell_checker.check(text),
+            "rules": lambda: self.rule_checker.check(text),
+        }
 
         if self.enable_grammar and self.grammar_checker.available:
             tasks["grammar"] = lambda: self.grammar_checker.check(text)

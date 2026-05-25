@@ -141,8 +141,27 @@
 
 .popup-actions {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
   padding: var(--sp-2) var(--sp-4) var(--sp-3);
   border-top: 1px solid var(--border);
   background: var(--bg-elevated);
+  gap: var(--sp-2);
 }
+
+.popup-add-dict-btn {
+  color: var(--context-color) !important;
+  border-color: hsl(42, 70%, 45%, 0.4) !important;
+  font-size: 0.7rem !important;
+}
+
+.popup-add-dict-btn:hover {
+  background: var(--context-bg) !important;
+}
+
+/* Keyboard focus ring */
+.popup-suggestion-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+

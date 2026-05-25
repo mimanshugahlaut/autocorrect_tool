@@ -24,8 +24,10 @@ backend/app/nlp/models/
 # Node
 node_modules/
 frontend/dist/
+extension/dist/
 frontend/.env
 frontend/.env.local
+extension/.env
 
 # IDE
 .vscode/
@@ -40,3 +42,5 @@ desktop.ini
 
 # Logs
 *.log
+*.err.log
+*.out.log

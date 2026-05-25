@@ -1,0 +1,19 @@
+/* Popup base reset */
+html, body, #root {
+  width: 420px;
+  height: 580px;
+  overflow: hidden;
+  background: hsl(225, 28%, 7%);
+  color: hsl(220, 20%, 94%);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar       { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: hsl(225, 20%, 28%); border-radius: 99px; }

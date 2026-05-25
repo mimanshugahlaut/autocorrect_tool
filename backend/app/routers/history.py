@@ -2,14 +2,16 @@
 Router: /api/history and /api/dictionary
 """
 import logging
-from fastapi import APIRouter, Request, Depends, Query
+from fastapi import APIRouter, Request, Depends, Query, HTTPException
 from slowapi import Limiter  # type: ignore
 
 from app.models import HistoryResponse, DictionaryRequest, DictionaryResponse
 from app.middleware.rate_limiter import limiter
+from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+settings = get_settings()
 
 
 def get_supabase(request: Request):
@@ -21,7 +23,7 @@ def get_pipeline(request: Request):
 
 
 @router.get("/history", response_model=HistoryResponse)
-@limiter.limit("30/minute")
+@limiter.limit(settings.rate_limit_check)
 async def get_history(
     request: Request,
     limit: int = Query(50, ge=1, le=100),
@@ -32,8 +34,21 @@ async def get_history(
     return supabase.get_history(limit=limit, offset=offset)
 
 
+@router.delete("/history")
+@limiter.limit(settings.rate_limit_check)
+async def clear_history(
+    request: Request,
+    supabase=Depends(get_supabase),
+) -> dict:
+    """Delete all correction history records."""
+    if not supabase.available:
+        return {"deleted": 0, "message": "Supabase not configured — nothing to delete."}
+    deleted = supabase.clear_history()
+    return {"deleted": deleted, "message": "History cleared."}
+
+
 @router.post("/dictionary", response_model=DictionaryResponse)
-@limiter.limit("30/minute")
+@limiter.limit(settings.rate_limit_check)
 async def add_dictionary_words(
     request: Request,
     body: DictionaryRequest,
@@ -52,7 +67,7 @@ async def add_dictionary_words(
 
 
 @router.get("/dictionary", response_model=DictionaryResponse)
-@limiter.limit("30/minute")
+@limiter.limit(settings.rate_limit_check)
 async def get_dictionary_words(
     request: Request,
     supabase=Depends(get_supabase),
@@ -60,3 +75,25 @@ async def get_dictionary_words(
     """Return the custom dictionary words."""
     words = supabase.get_custom_words() if supabase.available else []
     return DictionaryResponse(words=words, total=len(words))
+
+
+@router.delete("/dictionary/{word}")
+@limiter.limit(settings.rate_limit_check)
+async def remove_dictionary_word(
+    word: str,
+    request: Request,
+    supabase=Depends(get_supabase),
+    pipeline=Depends(get_pipeline),
+) -> dict:
+    """Remove a word from the custom dictionary."""
+    clean = word.strip().lower()
+    if not clean:
+        raise HTTPException(status_code=400, detail="Word cannot be empty.")
+
+    # Remove from Supabase if available
+    if supabase.available:
+        supabase.remove_custom_word(clean)
+
+    # Note: the in-memory spell checker (pyspellchecker) does not support
+    # removing words once added — a restart is needed for full effect.
+    return {"word": clean, "message": "Word removed from dictionary."}

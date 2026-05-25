@@ -6,29 +6,68 @@ import './SuggestionPopup.css';
  * Floating suggestion popup — appears above/below a clicked error.
  *
  * Props:
- *   error       — ErrorSuggestion object from API
- *   anchorRect  — DOMRect of the clicked span
- *   onAccept    — (error, suggestion) => void
- *   onDismiss   — (error) => void
- *   onClose     — () => void
+ *   error              — ErrorSuggestion object from API
+ *   anchorRect         — DOMRect of the clicked span
+ *   onAccept           — (error, suggestion) => void
+ *   onDismiss          — (error) => void
+ *   onClose            — () => void
+ *   onAddToDictionary  — (word) => void  (only for spelling errors)
  */
-export default function SuggestionPopup({ error, anchorRect, onAccept, onDismiss, onClose }) {
+export default function SuggestionPopup({
+  error,
+  anchorRect,
+  onAccept,
+  onDismiss,
+  onClose,
+  onAddToDictionary,
+}) {
   const popupRef = useRef(null);
   const cfg = ERROR_CONFIG[error.error_type] || ERROR_CONFIG.spelling;
 
-  // Close on Escape
+  // Close on Escape, keyboard navigation
   useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    const handler = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      // Arrow keys to cycle suggestions
+      if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && popupRef.current) {
+        const btns = [...popupRef.current.querySelectorAll('.popup-suggestion-btn')];
+        if (!btns.length) return;
+        const idx = btns.indexOf(document.activeElement);
+        const next = e.key === 'ArrowDown'
+          ? (idx + 1) % btns.length
+          : (idx - 1 + btns.length) % btns.length;
+        btns[next]?.focus();
+        e.preventDefault();
+      }
+    };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  // Position popup below (or above) the anchor span
+  // Smart positioning: show below, flip above if not enough space
+  const POPUP_WIDTH  = 280;
+  const POPUP_HEIGHT = 220; // rough estimate
+  const MARGIN       = 8;
+
+  const left = Math.max(
+    MARGIN,
+    Math.min(anchorRect.left, window.innerWidth - POPUP_WIDTH - MARGIN)
+  );
+
+  const spaceBelow = window.innerHeight - anchorRect.bottom;
+  const top = spaceBelow >= POPUP_HEIGHT + MARGIN
+    ? anchorRect.bottom + MARGIN
+    : anchorRect.top - POPUP_HEIGHT - MARGIN;
+
   const style = {
     position: 'fixed',
-    left: Math.min(anchorRect.left, window.innerWidth - 280) + 'px',
-    top:  anchorRect.bottom + 8 + 'px',
+    left: `${left}px`,
+    top:  `${Math.max(MARGIN, top)}px`,
     zIndex: 1000,
+    width: POPUP_WIDTH,
   };
 
   return (
@@ -96,6 +135,19 @@ export default function SuggestionPopup({ error, anchorRect, onAccept, onDismiss
           >
             Ignore
           </button>
+          {error.error_type === 'spelling' && onAddToDictionary && (
+            <button
+              id={`add-dict-popup-${error.offset}`}
+              className="btn btn-ghost btn-sm popup-add-dict-btn"
+              onClick={() => {
+                onAddToDictionary(error.original);
+                onClose();
+              }}
+              title="Add to custom dictionary — won't be flagged again"
+            >
+              + Dictionary
+            </button>
+          )}
         </div>
       </div>
     </>

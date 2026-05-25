@@ -2,19 +2,24 @@
 Router: POST /api/check and POST /api/correct
 """
 import logging
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Request, Depends, HTTPException
 from slowapi import Limiter  # type: ignore
 from slowapi.util import get_remote_address  # type: ignore
 
 from app.models import CheckRequest, CheckResponse, CorrectRequest, CorrectResponse
 from app.middleware.rate_limiter import limiter
+from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+settings = get_settings()
 
 
 def get_pipeline(request: Request):
-    return request.app.state.pipeline
+    pipeline = request.app.state.pipeline
+    if pipeline is None:
+        raise HTTPException(status_code=503, detail="NLP pipeline is not yet initialized. Please try again in a moment.")
+    return pipeline
 
 
 def get_supabase(request: Request):
@@ -22,7 +27,7 @@ def get_supabase(request: Request):
 
 
 @router.post("/check", response_model=CheckResponse)
-@limiter.limit("30/minute")
+@limiter.limit(settings.rate_limit_check)
 def check_text(
     request: Request,
     body: CheckRequest,
@@ -49,7 +54,7 @@ def check_text(
 
 
 @router.post("/correct", response_model=CorrectResponse)
-@limiter.limit("10/minute")
+@limiter.limit(settings.rate_limit_correct)
 def correct_text(
     request: Request,
     body: CorrectRequest,

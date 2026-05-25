@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { createEditor, Text, Transforms, Editor } from 'slate';
-import { Slate, Editable, withReact, ReactEditor } from 'slate-react';
+import { createEditor, Text } from 'slate';
+import { Slate, Editable, withReact } from 'slate-react';
 import { withHistory } from 'slate-history';
 import SuggestionPopup from './SuggestionPopup';
 import { ERROR_CONFIG } from '../../utils/errorTypes';
@@ -13,6 +13,14 @@ Example: "I has went to the store yesterday and buyed some apples."
 Try spelling mistakes, grammar errors, or awkward phrasing — errors will be highlighted as you type.`;
 
 const initialValue = [{ type: 'paragraph', children: [{ text: '' }] }];
+
+function plainTextToSlate(text) {
+  const lines = text.split('\n');
+  return (lines.length ? lines : ['']).map((line) => ({
+    type: 'paragraph',
+    children: [{ text: line }],
+  }));
+}
 
 /**
  * Extracts plain text from Slate's value array.
@@ -62,7 +70,7 @@ function buildDecorations(errors, nodes) {
   return decorations;
 }
 
-export default function EditorComponent({ text, errors, onTextChange, onAccept, onDismiss }) {
+export default function EditorComponent({ text, errors, onTextChange, onAccept, onDismiss, onAddToDictionary }) {
   const editor = useMemo(() => withHistory(withReact(createEditor())), []);
   const [value, setValue]           = useState(initialValue);
   const [popupState, setPopupState] = useState(null); // { error, rect }
@@ -71,19 +79,13 @@ export default function EditorComponent({ text, errors, onTextChange, onAccept, 
   useEffect(() => {
     const currentPlainText = slateToPlainText(value);
     if (text !== currentPlainText) {
-      const newValue = text.split('\n').map((line) => ({
-        type: 'paragraph',
-        children: [{ text: line }],
-      }));
+      const newValue = plainTextToSlate(text);
       setValue(newValue);
-      
-      Transforms.select(editor, {
-        anchor: Editor.start(editor, []),
-        focus:  Editor.end(editor, []),
-      });
-      editor.insertFragment(newValue.map((n) => ({ ...n })));
+      editor.children = newValue;
+      editor.selection = null;
+      editor.onChange();
     }
-  }, [text, editor]);
+  }, [text, editor, value]);
 
   const handleChange = useCallback(
     (newValue) => {
@@ -148,16 +150,11 @@ export default function EditorComponent({ text, errors, onTextChange, onAccept, 
       const after  = text.slice(error.offset + error.length);
       const newText = before + suggestion + after;
 
-      // Replace entire content
-      const newValue = newText.split('\n').map((line) => ({
-        type: 'paragraph',
-        children: [{ text: line }],
-      }));
-      Transforms.select(editor, {
-        anchor: Editor.start(editor, []),
-        focus:  Editor.end(editor, []),
-      });
-      editor.insertFragment(newValue.map((n) => ({ ...n })));
+      const newValue = plainTextToSlate(newText);
+      setValue(newValue);
+      editor.children = newValue;
+      editor.selection = null;
+      editor.onChange();
 
       onAccept(error, suggestion);
       setPopupState(null);
@@ -197,6 +194,7 @@ export default function EditorComponent({ text, errors, onTextChange, onAccept, 
           onAccept={handleAccept}
           onDismiss={handleDismiss}
           onClose={() => setPopupState(null)}
+          onAddToDictionary={onAddToDictionary}
         />
       )}
     </div>

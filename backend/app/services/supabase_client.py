@@ -96,3 +96,31 @@ class SupabaseService:
         except Exception as exc:
             logger.error(f"Failed to add words: {exc}")
             return []
+
+    def clear_history(self) -> int:
+        """Delete all correction history records. Returns number of deleted rows."""
+        if not self.available:
+            return 0
+        try:
+            result = (
+                self._client.table("correction_history")
+                .delete()
+                .neq("id", 0)  # delete all rows
+                .execute()
+            )
+            return len(result.data or [])
+        except Exception as exc:
+            logger.error(f"Failed to clear history: {exc}")
+            return 0
+
+    def remove_custom_word(self, word: str) -> bool:
+        """Remove a single word from the custom dictionary. Returns True if found."""
+        if not self.available:
+            return False
+        try:
+            self._client.table("custom_dictionary").delete().eq("word", word.lower()).execute()
+            return True
+        except Exception as exc:
+            logger.error(f"Failed to remove word '{word}': {exc}")
+            return False
+

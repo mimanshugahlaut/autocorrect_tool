@@ -1,0 +1,40 @@
+FROM python:3.12-slim
+
+# Install Java 17+ for language-tool-python (LanguageTool 6.6+)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    default-jre-headless \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up user with ID 1000 (standard for Hugging Face Spaces)
+RUN useradd -m -u 1000 user
+WORKDIR /app
+RUN chown -R user:user /app
+
+# Switch to user
+USER user
+ENV PATH="/home/user/.local/bin:${PATH}"
+
+# Copy requirements and install dependencies
+COPY --chown=user:user requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+# Pre-download the Hugging Face NLP models at build time so the space starts instantly
+RUN python -c "\
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM; \
+AutoTokenizer.from_pretrained('grammarly/coedit-large'); \
+AutoModelForSeq2SeqLM.from_pretrained('grammarly/coedit-large')"
+
+# Copy application files
+COPY --chown=user:user . .
+
+# Set environment variables for Hugging Face environment
+ENV ENABLE_CONTEXT_MODEL=true
+ENV ENABLE_GRAMMAR_CHECK=true
+ENV HF_DEVICE=cpu
+ENV PORT=7860
+
+EXPOSE 7860
+
+# Run uvicorn on port 7860 for Hugging Face Spaces
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860", "--workers", "1"]

@@ -12,6 +12,9 @@ const api = axios.create({
 api.interceptors.response.use(
   (res) => res,
   (err) => {
+    if (axios.isCancel(err)) {
+      return Promise.reject(new Error('Request cancelled'));
+    }
     const detail = err.response?.data?.detail || err.response?.data?.error || err.message;
     return Promise.reject(new Error(detail));
   }
@@ -20,20 +23,22 @@ api.interceptors.response.use(
 /**
  * Check text for spelling, grammar, and contextual errors.
  * @param {string} text
+ * @param {AbortSignal} [signal] - Optional AbortController signal
  * @returns {Promise<import('../utils/errorTypes').CheckResponse>}
  */
-export async function checkText(text) {
-  const { data } = await api.post('/api/check', { text });
+export async function checkText(text, signal) {
+  const { data } = await api.post('/api/check', { text }, { signal });
   return data;
 }
 
 /**
  * Return fully corrected text.
  * @param {string} text
+ * @param {AbortSignal} [signal]
  * @returns {Promise<{original_text: string, corrected_text: string, changes_made: number}>}
  */
-export async function correctText(text) {
-  const { data } = await api.post('/api/correct', { text });
+export async function correctText(text, signal) {
+  const { data } = await api.post('/api/correct', { text }, { signal });
   return data;
 }
 
@@ -44,6 +49,14 @@ export async function correctText(text) {
  */
 export async function getHistory(limit = 50, offset = 0) {
   const { data } = await api.get('/api/history', { params: { limit, offset } });
+  return data;
+}
+
+/**
+ * Delete all correction history.
+ */
+export async function clearHistory() {
+  const { data } = await api.delete('/api/history');
   return data;
 }
 
@@ -65,9 +78,23 @@ export async function getDictionaryWords() {
 }
 
 /**
- * Check API health.
+ * Remove a word from the custom dictionary.
+ * @param {string} word
+ */
+export async function removeDictionaryWord(word) {
+  const { data } = await api.delete(`/api/dictionary/${encodeURIComponent(word)}`);
+  return data;
+}
+
+/**
+ * Check API health. Returns null on failure (backend offline).
+ * @returns {Promise<{status: string, grammar_checker: boolean, context_model: boolean, supabase: boolean} | null>}
  */
 export async function getHealth() {
-  const { data } = await api.get('/api/health');
-  return data;
+  try {
+    const { data } = await api.get('/api/health', { timeout: 3000 });
+    return data;
+  } catch {
+    return null;
+  }
 }

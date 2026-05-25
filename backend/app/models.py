@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Literal
 
 
@@ -49,6 +49,24 @@ class HistoryResponse(BaseModel):
 
 class DictionaryRequest(BaseModel):
     words: list[str] = Field(..., min_length=1, description="Words to add to custom dictionary")
+
+    @field_validator("words")
+    @classmethod
+    def normalize_words(cls, words: list[str]) -> list[str]:
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for word in words:
+            clean = word.strip().lower()
+            if not clean:
+                continue
+            if not all(char.isalpha() or char in {"'", "-"} for char in clean):
+                raise ValueError("Dictionary words may only contain letters, apostrophes, or hyphens")
+            if clean not in seen:
+                seen.add(clean)
+                normalized.append(clean)
+        if not normalized:
+            raise ValueError("At least one non-empty word is required")
+        return normalized
 
 
 class DictionaryResponse(BaseModel):
