@@ -3,8 +3,6 @@ Router: POST /api/check and POST /api/correct
 """
 import logging
 from fastapi import APIRouter, Request, Depends, HTTPException
-from slowapi import Limiter  # type: ignore
-from slowapi.util import get_remote_address  # type: ignore
 
 from app.models import CheckRequest, CheckResponse, CorrectRequest, CorrectResponse
 from app.middleware.rate_limiter import limiter

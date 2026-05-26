@@ -9,8 +9,9 @@ Tiers 1 & 2 run concurrently; Tier 3 runs after.
 Results are merged and deduplicated by character offset.
 """
 import logging
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from collections import Counter
+from typing import Callable
 
 from app.models import CheckResponse, CorrectResponse, ErrorSuggestion
 from app.nlp.spell_checker import SpellCheckerModule
@@ -83,7 +84,7 @@ class NLPPipeline:
         all_errors: list[ErrorSuggestion] = []
 
         # ── Tier 1 & 2: Run concurrently ─────────────────────────────────
-        tasks: dict[str, callable] = {
+        tasks: dict[str, Callable[[], list[ErrorSuggestion]]] = {
             "spelling": lambda: self.spell_checker.check(text),
             "rules": lambda: self.rule_checker.check(text),
         }
@@ -92,7 +93,7 @@ class NLPPipeline:
             tasks["grammar"] = lambda: self.grammar_checker.check(text)
 
         with ThreadPoolExecutor(max_workers=2) as executor:
-            futures = {executor.submit(fn): name for name, fn in tasks.items()}
+            futures: dict[Future[list[ErrorSuggestion]], str] = {executor.submit(fn): name for name, fn in tasks.items()}
             for future in as_completed(futures):
                 name = futures[future]
                 try:
@@ -116,7 +117,7 @@ class NLPPipeline:
         corrected = _apply_corrections(text, merged)
 
         # ── Count by type ─────────────────────────────────────────────────
-        error_counts = dict(Counter(e.error_type for e in merged))
+        error_counts: dict[str, int] = {key: value for key, value in Counter(e.error_type for e in merged).items()}
 
         return CheckResponse(
             original_text=text,

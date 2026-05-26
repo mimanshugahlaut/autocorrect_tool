@@ -4,6 +4,7 @@ Uses encoder-decoder T5 architecture for deep contextual grammar correction.
 """
 import difflib
 import logging
+from typing import Any
 from app.models import ErrorSuggestion
 
 logger = logging.getLogger(__name__)
@@ -16,14 +17,13 @@ class ContextModelModule:
     def __init__(self, model_name: str = "grammarly/coedit-large", device: str = "cpu") -> None:
         self._model_name = model_name
         self._device = device
-        self._tokenizer = None
-        self._model = None
+        self._tokenizer: Any | None = None
+        self._model: Any | None = None
 
     def initialize(self) -> None:
         """Load model and tokenizer. Call once at startup."""
         try:
             from transformers import AutoTokenizer, AutoModelForSeq2SeqLM  # type: ignore
-            import torch  # type: ignore
 
             logger.info(f"Loading context model: {self._model_name}…")
             self._tokenizer = AutoTokenizer.from_pretrained(self._model_name)
@@ -47,8 +47,13 @@ class ContextModelModule:
         try:
             import torch  # type: ignore
 
+            tokenizer = self._tokenizer
+            model = self._model
+            assert tokenizer is not None
+            assert model is not None
+
             input_text = _INSTRUCTION_PREFIX + text
-            inputs = self._tokenizer(
+            inputs = tokenizer(
                 input_text,
                 return_tensors="pt",
                 max_length=512,
@@ -56,14 +61,14 @@ class ContextModelModule:
             )
 
             with torch.no_grad():
-                outputs = self._model.generate(
+                outputs = model.generate(
                     inputs["input_ids"],
                     max_length=512,
                     num_beams=4,
                     early_stopping=True,
                 )
 
-            corrected = self._tokenizer.decode(outputs[0], skip_special_tokens=True)
+            corrected = tokenizer.decode(outputs[0], skip_special_tokens=True)
             return corrected
         except Exception as exc:
             logger.error(f"Context model inference failed: {exc}")

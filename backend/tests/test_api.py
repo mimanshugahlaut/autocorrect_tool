@@ -1,7 +1,7 @@
 """Integration tests for FastAPI endpoints."""
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from app.main import create_app
 from app.models import CheckResponse, CorrectResponse, ErrorSuggestion

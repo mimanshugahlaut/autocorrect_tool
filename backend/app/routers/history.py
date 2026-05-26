@@ -3,7 +3,6 @@ Router: /api/history and /api/dictionary
 """
 import logging
 from fastapi import APIRouter, Request, Depends, Query, HTTPException
-from slowapi import Limiter  # type: ignore
 
 from app.models import HistoryResponse, DictionaryRequest, DictionaryResponse
 from app.middleware.rate_limiter import limiter
@@ -60,7 +59,8 @@ async def add_dictionary_words(
     pipeline.spell_checker.add_words(body.words)
 
     # Persist to Supabase if available
-    saved = supabase.add_custom_words(body.words) if supabase.available else body.words
+    if supabase.available:
+        supabase.add_custom_words(body.words)
 
     all_words = supabase.get_custom_words() if supabase.available else body.words
     return DictionaryResponse(words=all_words, total=len(all_words))

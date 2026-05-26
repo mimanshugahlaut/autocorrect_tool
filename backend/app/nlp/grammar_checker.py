@@ -3,12 +3,13 @@ Grammar checker module using language-tool-python.
 Wraps the LanguageTool local server to find grammar/style errors.
 """
 import logging
+from typing import Literal
 from app.models import ErrorSuggestion
 
 logger = logging.getLogger(__name__)
 
 # Map LanguageTool categories to our error types
-_CATEGORY_MAP: dict[str, str] = {
+_CATEGORY_MAP: dict[str, Literal["spelling", "grammar", "context"]] = {
     "TYPOS": "spelling",
     "GRAMMAR": "grammar",
     "PUNCTUATION": "grammar",
@@ -62,7 +63,9 @@ class GrammarCheckerModule:
             return []
 
         try:
-            matches = self._tool.check(text)
+            tool = self._tool
+            assert tool is not None
+            matches = tool.check(text)
         except Exception as exc:
             logger.error(f"LanguageTool check failed: {exc}")
             return []

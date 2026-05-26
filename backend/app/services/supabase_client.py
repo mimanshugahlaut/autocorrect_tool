@@ -3,6 +3,7 @@ Supabase client service for storing correction history and custom dictionary.
 Gracefully degrades if Supabase is not configured.
 """
 import logging
+from typing import Any
 from datetime import datetime, timezone
 from app.models import CorrectionRecord, HistoryResponse
 
@@ -11,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class SupabaseService:
     def __init__(self, url: str = "", key: str = "") -> None:
-        self._client = None
+        self._client: Any | None = None
         if url and key:
             try:
                 from supabase import create_client  # type: ignore
@@ -37,6 +38,8 @@ class SupabaseService:
         if not self.available:
             return None
         try:
+            client = self._client
+            assert client is not None
             data = {
                 "original_text": original_text,
                 "corrected_text": corrected_text,
@@ -44,7 +47,7 @@ class SupabaseService:
                 "error_types": error_types,
                 "created_at": datetime.now(timezone.utc).isoformat(),
             }
-            result = self._client.table("correction_history").insert(data).execute()
+            result = client.table("correction_history").insert(data).execute()
             if result.data:
                 row = result.data[0]
                 return CorrectionRecord(**row)
@@ -56,8 +59,10 @@ class SupabaseService:
         if not self.available:
             return HistoryResponse(records=[], total=0)
         try:
+            client = self._client
+            assert client is not None
             result = (
-                self._client.table("correction_history")
+                client.table("correction_history")
                 .select("*", count="exact")
                 .order("created_at", desc=True)
                 .range(offset, offset + limit - 1)
@@ -76,7 +81,9 @@ class SupabaseService:
         if not self.available:
             return []
         try:
-            result = self._client.table("custom_dictionary").select("word").execute()
+            client = self._client
+            assert client is not None
+            result = client.table("custom_dictionary").select("word").execute()
             return [r["word"] for r in (result.data or [])]
         except Exception as exc:
             logger.error(f"Failed to fetch dictionary: {exc}")
@@ -87,8 +94,10 @@ class SupabaseService:
             return []
         try:
             rows = [{"word": w.strip().lower()} for w in words if w.strip()]
+            client = self._client
+            assert client is not None
             result = (
-                self._client.table("custom_dictionary")
+                client.table("custom_dictionary")
                 .upsert(rows, on_conflict="word")
                 .execute()
             )
@@ -102,8 +111,10 @@ class SupabaseService:
         if not self.available:
             return 0
         try:
+            client = self._client
+            assert client is not None
             result = (
-                self._client.table("correction_history")
+                client.table("correction_history")
                 .delete()
                 .neq("id", 0)  # delete all rows
                 .execute()
@@ -118,7 +129,9 @@ class SupabaseService:
         if not self.available:
             return False
         try:
-            self._client.table("custom_dictionary").delete().eq("word", word.lower()).execute()
+            client = self._client
+            assert client is not None
+            client.table("custom_dictionary").delete().eq("word", word.lower()).execute()
             return True
         except Exception as exc:
             logger.error(f"Failed to remove word '{word}': {exc}")

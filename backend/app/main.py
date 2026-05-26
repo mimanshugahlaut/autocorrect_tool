@@ -6,11 +6,13 @@ import logging
 import time
 import uuid
 from contextlib import asynccontextmanager
+from typing import cast
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded  # type: ignore
 from slowapi import _rate_limit_exceeded_handler  # type: ignore
+from starlette.responses import Response
 
 from app.config import get_settings
 from app.middleware.rate_limiter import limiter
@@ -102,7 +104,11 @@ def create_app() -> FastAPI:
 
     # ── Rate Limiter ──────────────────────────────────────────────────────
     app.state.limiter = limiter
-    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+    def rate_limit_exception_handler(request: Request, exc: Exception) -> Response:
+        return _rate_limit_exceeded_handler(request, cast(RateLimitExceeded, exc))
+
+    app.add_exception_handler(RateLimitExceeded, rate_limit_exception_handler)
 
     # ── CORS ──────────────────────────────────────────────────────────────
     app.add_middleware(
